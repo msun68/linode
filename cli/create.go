@@ -84,7 +84,7 @@ func create(cmd *cobra.Command, args []string) error {
 			Network:           true,
 			DevTmpFsAutomount: true,
 		},
-		Kernel: "GRUB 2",
+		Kernel: "linode/grub2",
 	})
 
 	if err != nil {
