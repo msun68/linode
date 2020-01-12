@@ -2,7 +2,7 @@ package cli
 
 import (
 	"context"
-	"github.com/cheynewallace/tabby"
+
 	"github.com/spf13/cobra"
 )
 
@@ -19,21 +19,14 @@ func init() {
 }
 
 func list(cmd *cobra.Command, args []string) error {
-	instances, _ := linodeClient.ListInstances(context.Background(), nil)
 
-	t := tabby.New()
-	t.AddHeader("ID", "LABEL", "REGION", "TYPE", "IMAGE", "STATUS", "IP")
+	instances, err := linodeClient.ListInstances(context.Background(), nil)
 
-	for _, instance := range instances {
-		var ips []string
-		for _, ip := range instance.IPv4 {
-			ips = append(ips, ip.String())
-		}
-		ips = append(ips, instance.IPv6)
-		t.AddLine(instance.ID, instance.Label, instance.Region, instance.Type, instance.Image, instance.Status, ips)
+	if err != nil {
+		return err
 	}
 
-	t.Print()
+	printInstances(instances...)
 
 	return nil
 }
