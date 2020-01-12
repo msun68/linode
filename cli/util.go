@@ -3,7 +3,23 @@ package cli
 import (
 	"github.com/cheynewallace/tabby"
 	"github.com/linode/linodego"
+	"github.com/sethvargo/go-password/password"
 )
+
+func generatePassword() (string, error) {
+	generator, err := password.NewGenerator(&password.GeneratorInput{
+		LowerLetters: "abcdefghijklmnopqrstuvwxyz",
+		UpperLetters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+		Symbols:      "!\"#$%&'()*+,-./:;<=>?@[]^_`{|}~\\",
+		Digits:       "0123456789",
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return generator.Generate(20, 5, 5, false, true)
+}
 
 func printInstances(instances ...linodego.Instance) {
 	t := tabby.New()

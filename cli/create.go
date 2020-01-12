@@ -23,12 +23,18 @@ var createCmd = &cobra.Command{
 
 func init() {
 	createCmd.Flags().StringVar(&createRegion, "region", "us-west", "The region where the virtual machine will be located.")
-	createCmd.Flags().StringVar(&createType, "type", "g6-nanode-1", "")
-	createCmd.Flags().StringVar(&createImage, "image", "linode/ubuntu18.04", "")
+	createCmd.Flags().StringVar(&createType, "type", "g6-nanode-1", "The type of the virtual machine you are creating.")
+	createCmd.Flags().StringVar(&createImage, "image", "linode/ubuntu18.04", "An Image ID to deploy the Disk from.")
 	rootCmd.AddCommand(createCmd)
 }
 
 func create(cmd *cobra.Command, args []string) error {
+
+	rootPass, err := generatePassword()
+
+	if err != nil {
+		return err
+	}
 
 	image, err := linodeClient.GetImage(context.Background(), createImage)
 
@@ -54,6 +60,7 @@ func create(cmd *cobra.Command, args []string) error {
 		Label:          image.Label + " Disk",
 		Size:           instance.Specs.Disk,
 		Image:          image.ID,
+		RootPass:       rootPass,
 		Filesystem:     "ext4",
 		AuthorizedKeys: nil,
 	})
