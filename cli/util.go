@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"text/template"
+	"time"
 
 	"github.com/cheynewallace/tabby"
 	"github.com/linode/linodego"
@@ -44,14 +45,14 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 		return err
 	}
 
-	connection, err := ssh.Dial("tcp", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
-		User:    "root",
-		Auth:    []ssh.AuthMethod{ssh.Password(rootPass)},
-		Timeout: 0,
-	})
+	var connection *ssh.Client
 
-	if err != nil {
-		return err
+	for retries := 0; connection == nil; retries++ {
+		time.Sleep((50 << retries) * time.Millisecond)
+		connection, _ = ssh.Dial("tcp", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
+			User: "root",
+			Auth: []ssh.AuthMethod{ssh.Password(rootPass)},
+		})
 	}
 
 	session, err := connection.NewSession()

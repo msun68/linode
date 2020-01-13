@@ -119,5 +119,9 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err := linodeClient.RebootInstance(context.Background(), instance.ID, config.ID); err != nil {
+		return err
+	}
+
 	return nil
 }
