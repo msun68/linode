@@ -56,7 +56,7 @@ func create(cmd *cobra.Command, args []string) error {
 	instance, err := linodeClient.CreateInstance(context.Background(), linodego.InstanceCreateOptions{
 		Region:    createRegion,
 		Type:      createType,
-		Label:     args[0],
+		Label:     createLabel,
 		PrivateIP: true,
 		Booted:    &falseBool,
 	})
