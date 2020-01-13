@@ -29,6 +29,7 @@ chmod 0700 /home/{{.Login}}/.ssh
 chmod 0600 /home/{{.Login}}/.ssh/authorized_keys
 chown -R {{.Login}}:{{.Login}} /home/{{.Login}}/.ssh
 echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+reboot
 `))
 
 	var script bytes.Buffer

@@ -58,7 +58,7 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 
 	bootstrap, err := linodeClient.CreateStackscript(context.Background(), linodego.StackscriptCreateOptions{
-		Label:    createLabel + " Bootstrap Script",
+		Label:    createLabel + "-bootstrap",
 		Images:   []string{image.ID},
 		IsPublic: false,
 		Script:   script,
@@ -90,6 +90,8 @@ func create(cmd *cobra.Command, args []string) error {
 		Filesystem:    "ext4",
 		StackscriptID: bootstrap.ID,
 	})
+
+	_ = linodeClient.DeleteStackscript(context.Background(), bootstrap.ID)
 
 	if err != nil {
 		_ = linodeClient.DeleteInstance(context.Background(), instance.ID)
