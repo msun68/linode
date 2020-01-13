@@ -2,16 +2,11 @@ package cli
 
 import (
 	"bytes"
-	"log"
 	"text/template"
-	"time"
-
-	"github.com/bramvdbogaerde/go-scp"
 
 	"github.com/cheynewallace/tabby"
 	"github.com/linode/linodego"
 	"github.com/sethvargo/go-password/password"
-	"golang.org/x/crypto/ssh"
 )
 
 type bootstrapInfo struct {
@@ -20,7 +15,7 @@ type bootstrapInfo struct {
 	AuthorizedKeys []string
 }
 
-func Bootstrap(instance linodego.Instance, rootPass string, login string, authorizedKey []string) error {
+func GenerateBootstrapScript(label string, login string, authorizedKey []string) (string, error) {
 	tmpl := template.Must(template.New("bootstrap").Parse(`
 #!/bin/bash
 echo '{{.Label}}' > /etc/hostname
@@ -40,52 +35,14 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 	var script bytes.Buffer
 
 	if err := tmpl.Execute(&script, bootstrapInfo{
-		Label:          instance.Label,
+		Label:          label,
 		Login:          login,
 		AuthorizedKeys: authorizedKey,
 	}); err != nil {
-		return err
+		return "", err
 	}
 
-	var connection *ssh.Client
-
-	for retries := 0; connection == nil; retries++ {
-		var err error
-		connection, err = ssh.Dial("tcp", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
-			User:            "root",
-			Auth:            []ssh.AuthMethod{ssh.Password(rootPass)},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-			BannerCallback:  ssh.BannerDisplayStderr(),
-		})
-		if err != nil {
-			log.Printf("%v. Retrying.", err)
-		}
-	}
-
-	session, err := connection.NewSession()
-
-	if err != nil {
-		return err
-	}
-
-	defer session.Close()
-
-	scpClient := scp.Client{
-		Session: session,
-		Timeout: time.Minute,
-	}
-
-	contents := script.Bytes()
-
-	if err := scpClient.Copy(bytes.NewReader(contents), "/tmp/bootstrap.sh", "0700", int64(len(contents))); err != nil {
-		return err
-	}
-
-	if err := session.Run("/tmp/bootstrap.sh"); err != nil {
-		return err
-	}
-
-	return nil
+	return script.String(), nil
 }
 
 func GeneratePassword() (string, error) {

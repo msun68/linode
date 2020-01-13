@@ -51,6 +51,23 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	script, err := GenerateBootstrapScript(createLabel, createLogin, createAuthorizedKeys)
+
+	if err != nil {
+		return err
+	}
+
+	bootstrap, err := linodeClient.CreateStackscript(context.Background(), linodego.StackscriptCreateOptions{
+		Label:    createLabel + " Bootstrap Script",
+		Images:   []string{image.ID},
+		IsPublic: false,
+		Script:   script,
+	})
+
+	if err != nil {
+		return err
+	}
+
 	falseBool := false
 
 	instance, err := linodeClient.CreateInstance(context.Background(), linodego.InstanceCreateOptions{
@@ -66,11 +83,12 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 
 	disk, err := linodeClient.CreateInstanceDisk(context.Background(), instance.ID, linodego.InstanceDiskCreateOptions{
-		Label:      image.Label + " Disk",
-		Size:       instance.Specs.Disk,
-		Image:      image.ID,
-		RootPass:   rootPass,
-		Filesystem: "ext4",
+		Label:         image.Label + " Disk",
+		Size:          instance.Specs.Disk,
+		Image:         image.ID,
+		RootPass:      rootPass,
+		Filesystem:    "ext4",
+		StackscriptID: bootstrap.ID,
 	})
 
 	if err != nil {
@@ -112,15 +130,6 @@ func create(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		PrintInstances(*instance)
-	}
-
-	if err := Bootstrap(*instance, rootPass, createLogin, createAuthorizedKeys); err != nil {
-		_ = linodeClient.DeleteInstance(context.Background(), instance.ID)
-		return err
-	}
-
-	if err := linodeClient.RebootInstance(context.Background(), instance.ID, config.ID); err != nil {
-		return err
 	}
 
 	return nil
