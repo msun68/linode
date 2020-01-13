@@ -3,9 +3,9 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"text/template"
-	"time"
 
 	"github.com/cheynewallace/tabby"
 	"github.com/linode/linodego"
@@ -48,11 +48,15 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 	var connection *ssh.Client
 
 	for retries := 0; connection == nil; retries++ {
-		time.Sleep((50 << retries) * time.Millisecond)
-		connection, _ = ssh.Dial("tcp", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
-			User: "root",
-			Auth: []ssh.AuthMethod{ssh.Password(rootPass)},
+		var err error
+		connection, err = ssh.Dial("tcp", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
+			User:            "root",
+			Auth:            []ssh.AuthMethod{ssh.Password(rootPass)},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		})
+		if err != nil {
+			log.Printf("%v. Retrying.", err)
+		}
 	}
 
 	session, err := connection.NewSession()
