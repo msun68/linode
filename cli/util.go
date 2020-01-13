@@ -43,7 +43,7 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 		return err
 	}
 
-	connection, err := ssh.Dial("dial", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
+	connection, err := ssh.Dial("tcp", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
 		User: "root",
 		Auth: []ssh.AuthMethod{ssh.Password(rootPass)},
 	})
