@@ -3,6 +3,7 @@ module github.com/msun68/linode
 go 1.13
 
 require (
+	github.com/bramvdbogaerde/go-scp v0.0.0-20191005185035-c96fe084709e
 	github.com/cheynewallace/tabby v1.1.0
 	github.com/linode/linodego v0.12.2
 	github.com/mitchellh/go-homedir v1.1.0

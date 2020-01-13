@@ -2,10 +2,10 @@ package cli
 
 import (
 	"bytes"
-	"fmt"
 	"log"
-	"os"
 	"text/template"
+
+	"github.com/bramvdbogaerde/go-scp"
 
 	"github.com/cheynewallace/tabby"
 	"github.com/linode/linodego"
@@ -21,6 +21,7 @@ type bootstrapInfo struct {
 
 func Bootstrap(instance linodego.Instance, rootPass string, login string, authorizedKey []string) error {
 	tmpl := template.Must(template.New("bootstrap").Parse(`
+#!/bin/bash
 echo '{{.Label}}' > /etc/hostname
 sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
@@ -68,30 +69,17 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 	defer session.Close()
 
-	in, err := session.StdinPipe()
+	scpClient := scp.Client{
+		Session: session,
+	}
 
-	if err != nil {
+	contents := script.Bytes()
+
+	if err := scpClient.Copy(bytes.NewReader(contents), "/tmp/bootstrap.sh", "0700", int64(len(contents))); err != nil {
 		return err
 	}
 
-	if err := session.RequestPty("xterm", 80, 40, ssh.TerminalModes{
-		ssh.ECHO:          0,
-		ssh.TTY_OP_ISPEED: 14400,
-		ssh.TTY_OP_OSPEED: 14400,
-	}); err != nil {
-		return err
-	}
-
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-
-	if err := session.Shell(); err != nil {
-		return err
-	}
-
-	fmt.Fprintln(in, script.String())
-
-	if err := session.Wait(); err != nil {
+	if err := session.Run("/tmp/bootstrap.sh"); err != nil {
 		return err
 	}
 
