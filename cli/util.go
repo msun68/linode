@@ -53,6 +53,7 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 			User:            "root",
 			Auth:            []ssh.AuthMethod{ssh.Password(rootPass)},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			BannerCallback:  ssh.BannerDisplayStderr(),
 		})
 		if err != nil {
 			log.Printf("%v. Retrying.", err)
@@ -73,8 +74,16 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 		return err
 	}
 
+	if err := session.RequestPty("xterm", 80, 40, ssh.TerminalModes{
+		ssh.ECHO:          0,
+		ssh.TTY_OP_ISPEED: 14400,
+		ssh.TTY_OP_OSPEED: 14400,
+	}); err != nil {
+		return err
+	}
+
 	session.Stdout = os.Stdout
-	session.Stderr = os.Stdout
+	session.Stderr = os.Stderr
 
 	if err := session.Shell(); err != nil {
 		return err
