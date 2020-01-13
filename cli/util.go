@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"text/template"
 
 	"github.com/cheynewallace/tabby"
@@ -44,8 +45,9 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 	}
 
 	connection, err := ssh.Dial("tcp", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
-		User: "root",
-		Auth: []ssh.AuthMethod{ssh.Password(rootPass)},
+		User:    "root",
+		Auth:    []ssh.AuthMethod{ssh.Password(rootPass)},
+		Timeout: 0,
 	})
 
 	if err != nil {
@@ -65,6 +67,9 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 	if err != nil {
 		return err
 	}
+
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stdout
 
 	if err := session.Shell(); err != nil {
 		return err
