@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"text/template"
+	"time"
 
 	"github.com/bramvdbogaerde/go-scp"
 
@@ -71,6 +72,7 @@ echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 	scpClient := scp.Client{
 		Session: session,
+		Timeout: time.Minute,
 	}
 
 	contents := script.Bytes()
