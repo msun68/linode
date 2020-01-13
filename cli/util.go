@@ -1,12 +1,85 @@
 package cli
 
 import (
+	"bytes"
+	"fmt"
+	"text/template"
+
 	"github.com/cheynewallace/tabby"
 	"github.com/linode/linodego"
 	"github.com/sethvargo/go-password/password"
+	"golang.org/x/crypto/ssh"
 )
 
-func generatePassword() (string, error) {
+type bootstrapInfo struct {
+	Label          string
+	Login          string
+	AuthorizedKeys []string
+}
+
+func Bootstrap(instance linodego.Instance, rootPass string, login string, authorizedKey []string) error {
+	tmpl := template.Must(template.New("bootstrap").Parse(`
+echo '{{.Label}}' > /etc/hostname
+sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+useradd -d /home/{{.Login}} -m {{.Login}}
+mkdir /home/{{.Login}}/.ssh
+{{range .AuthorizedKeys -}}
+echo '{{.}}' >> /home/{{$.Login}}/.ssh/authorized_keys
+{{- end}}
+chmod 0700 /home/{{.Login}}/.ssh
+chmod 0600 /home/{{.Login}}/.ssh/authorized_keys
+chown -R {{.Login}}:{{.Login}} /home/{{.Login}}/.ssh
+echo '{{.Login}} ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+`))
+
+	var script bytes.Buffer
+
+	if err := tmpl.Execute(&script, bootstrapInfo{
+		Label:          instance.Label,
+		Login:          login,
+		AuthorizedKeys: authorizedKey,
+	}); err != nil {
+		return err
+	}
+
+	connection, err := ssh.Dial("dial", instance.IPv4[0].String()+":22", &ssh.ClientConfig{
+		User: "root",
+		Auth: []ssh.AuthMethod{ssh.Password(rootPass)},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	session, err := connection.NewSession()
+
+	if err != nil {
+		return err
+	}
+
+	defer session.Close()
+
+	in, err := session.StdinPipe()
+
+	if err != nil {
+		return err
+	}
+
+	if err := session.Shell(); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(in, script.String())
+
+	if err := session.Wait(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GeneratePassword() (string, error) {
 	generator, err := password.NewGenerator(&password.GeneratorInput{
 		LowerLetters: "abcdefghijklmnopqrstuvwxyz",
 		UpperLetters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -18,10 +91,10 @@ func generatePassword() (string, error) {
 		return "", err
 	}
 
-	return generator.Generate(20, 5, 5, false, true)
+	return generator.Generate(40, 10, 10, false, true)
 }
 
-func printInstances(instances ...linodego.Instance) {
+func PrintInstances(instances ...linodego.Instance) {
 	t := tabby.New()
 	t.AddHeader("ID", "LABEL", "REGION", "TYPE", "IMAGE", "STATUS", "IP")
 	for _, instance := range instances {

@@ -2,13 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/linode/linodego"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
-	"net/http"
-	"os"
 )
 
 var (
@@ -18,11 +19,11 @@ var (
 
 // rootCmd represents the base command when called without any sub commands
 var rootCmd = &cobra.Command{
-	Use:   "linode",
-	Short: "Linode CLI",
-	Long:  "This application is a tool to manage virtual machines hosted in Linode.",
+	Use:               "linode",
+	Short:             "Linode CLI",
+	Long:              "This application is a tool to manage virtual machines hosted in Linode.",
 	PersistentPreRunE: preRun,
-	RunE:  run,
+	RunE:              run,
 }
 
 func init() {
@@ -52,6 +53,7 @@ func initConfig() {
 	viper.SetEnvPrefix("linode")
 	viper.AutomaticEnv() // read in environment variables that match
 
+	viper.SetDefault("debug", false)
 	viper.SetDefault("personal_access_token", "")
 
 	// If a config file is found, read it in.
@@ -70,7 +72,7 @@ func preRun(cmd *cobra.Command, args []string) error {
 	}
 
 	linodeClient = linodego.NewClient(oauth2Client)
-	linodeClient.SetDebug(true)
+	linodeClient.SetDebug(viper.GetBool("debug"))
 
 	return nil
 }

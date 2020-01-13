@@ -2,35 +2,44 @@ package cli
 
 import (
 	"context"
+
 	"github.com/linode/linodego"
 	"github.com/spf13/cobra"
 )
 
 var (
-	createRegion string
-	createType   string
-	createImage  string
+	createLabel          string
+	createRegion         string
+	createType           string
+	createImage          string
+	createLogin          string
+	createAuthorizedKeys []string
 )
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
-	Use:   "create <label>",
+	Use:   "create",
 	Short: "Create a new virtual machine",
 	Long:  "This command creates a new virtual machine in Linode.",
-	Args:  cobra.MinimumNArgs(1),
 	RunE:  create,
 }
 
 func init() {
+	createCmd.Flags().StringVar(&createLabel, "label", "", "")
 	createCmd.Flags().StringVar(&createRegion, "region", "us-west", "The region where the virtual machine will be located.")
 	createCmd.Flags().StringVar(&createType, "type", "g6-nanode-1", "The type of the virtual machine you are creating.")
 	createCmd.Flags().StringVar(&createImage, "image", "linode/ubuntu18.04", "An Image ID to deploy the Disk from.")
+	createCmd.Flags().StringVar(&createLogin, "login", "", "")
+	createCmd.Flags().StringArrayVar(&createAuthorizedKeys, "authorized-key", nil, "")
+	createCmd.MarkFlagRequired("label")
+	createCmd.MarkFlagRequired("login")
+	createCmd.MarkFlagRequired("authorized-key")
 	rootCmd.AddCommand(createCmd)
 }
 
 func create(cmd *cobra.Command, args []string) error {
 
-	rootPass, err := generatePassword()
+	rootPass, err := GeneratePassword()
 
 	if err != nil {
 		return err
@@ -57,12 +66,11 @@ func create(cmd *cobra.Command, args []string) error {
 	}
 
 	disk, err := linodeClient.CreateInstanceDisk(context.Background(), instance.ID, linodego.InstanceDiskCreateOptions{
-		Label:          image.Label + " Disk",
-		Size:           instance.Specs.Disk,
-		Image:          image.ID,
-		RootPass:       rootPass,
-		Filesystem:     "ext4",
-		AuthorizedKeys: nil,
+		Label:      image.Label + " Disk",
+		Size:       instance.Specs.Disk,
+		Image:      image.ID,
+		RootPass:   rootPass,
+		Filesystem: "ext4",
 	})
 
 	if err != nil {
@@ -92,14 +100,24 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = linodeClient.BootInstance(context.Background(), instance.ID, config.ID)
-
-	if err != nil {
+	if err := linodeClient.BootInstance(context.Background(), instance.ID, config.ID); err != nil {
 		_ = linodeClient.DeleteInstance(context.Background(), instance.ID)
 		return err
 	}
 
-	printInstances(*instance)
+	for instance.Status != linodego.InstanceRunning {
+		instance, err = linodeClient.GetInstance(context.Background(), instance.ID)
+		if err != nil {
+			_ = linodeClient.DeleteInstance(context.Background(), instance.ID)
+			return err
+		}
+		PrintInstances(*instance)
+	}
+
+	if err := Bootstrap(*instance, rootPass, createLogin, createAuthorizedKeys); err != nil {
+		_ = linodeClient.DeleteInstance(context.Background(), instance.ID)
+		return err
+	}
 
 	return nil
 }

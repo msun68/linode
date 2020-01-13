@@ -26,7 +26,7 @@ func list(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	printInstances(instances...)
+	PrintInstances(instances...)
 
 	return nil
 }
