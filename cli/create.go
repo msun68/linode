@@ -84,7 +84,7 @@ func create(cmd *cobra.Command, args []string) error {
 
 	disk, err := linodeClient.CreateInstanceDisk(context.Background(), instance.ID, linodego.InstanceDiskCreateOptions{
 		Label:         image.Label + " Disk",
-		Size:          instance.Specs.Disk,
+		Size:          instance.Specs.Disk - 256,
 		Image:         image.ID,
 		RootPass:      rootPass,
 		Filesystem:    "ext4",
