@@ -18,7 +18,6 @@ type bootstrapInfo struct {
 func GenerateBootstrapScript(label string, login string, authorizedKey []string) (string, error) {
 	tmpl := template.Must(template.New("bootstrap").Parse(`#!/bin/bash
 echo '{{.Label}}' > /etc/hostname
-sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 useradd -d /home/{{.Login}} -m {{.Login}}
 mkdir /home/{{.Login}}/.ssh

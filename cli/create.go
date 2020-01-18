@@ -98,11 +98,25 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	swap, err := linodeClient.CreateInstanceDisk(context.Background(), instance.ID, linodego.InstanceDiskCreateOptions{
+		Label:      "256MB Swap Image",
+		Size:       256,
+		Filesystem: "swap",
+	})
+
+	if err != nil {
+		_ = linodeClient.DeleteInstance(context.Background(), instance.ID)
+		return err
+	}
+
 	config, err := linodeClient.CreateInstanceConfig(context.Background(), instance.ID, linodego.InstanceConfigCreateOptions{
 		Label: "My " + image.Label + " Disk Profile",
 		Devices: linodego.InstanceConfigDeviceMap{
 			SDA: &linodego.InstanceConfigDevice{
 				DiskID: disk.ID,
+			},
+			SDB: &linodego.InstanceConfigDevice{
+				DiskID: swap.ID,
 			},
 		},
 		Helpers: &linodego.InstanceConfigHelpers{
