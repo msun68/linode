@@ -9,6 +9,7 @@ import (
 
 var (
 	createLabel          string
+	createTags           []string
 	createRegion         string
 	createType           string
 	createImage          string
@@ -26,14 +27,15 @@ var createCmd = &cobra.Command{
 
 func init() {
 	createCmd.Flags().StringVar(&createLabel, "label", "", "")
+	createCmd.Flags().StringSliceVar(&createTags, "tags", nil, "")
 	createCmd.Flags().StringVar(&createRegion, "region", "us-west", "The region where the virtual machine will be located.")
 	createCmd.Flags().StringVar(&createType, "type", "g6-nanode-1", "The type of the virtual machine you are creating.")
 	createCmd.Flags().StringVar(&createImage, "image", "linode/ubuntu18.04", "An Image ID to deploy the Disk from.")
 	createCmd.Flags().StringVar(&createLogin, "login", "", "")
 	createCmd.Flags().StringArrayVar(&createAuthorizedKeys, "authorized-key", nil, "")
-	createCmd.MarkFlagRequired("label")
-	createCmd.MarkFlagRequired("login")
-	createCmd.MarkFlagRequired("authorized-key")
+	_ = createCmd.MarkFlagRequired("label")
+	_ = createCmd.MarkFlagRequired("login")
+	_ = createCmd.MarkFlagRequired("authorized-key")
 	rootCmd.AddCommand(createCmd)
 }
 
@@ -75,6 +77,7 @@ func create(cmd *cobra.Command, args []string) error {
 		Type:      createType,
 		Label:     createLabel,
 		PrivateIP: true,
+		Tags:      createTags,
 		Booted:    &falseBool,
 	})
 
@@ -139,13 +142,15 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	for instance.Status != linodego.InstanceRunning {
-		instance, err = linodeClient.GetInstance(context.Background(), instance.ID)
+	var checkInstance *linodego.Instance
+
+	for checkInstance == nil || checkInstance.Status != linodego.InstanceRunning {
+		checkInstance, err = linodeClient.GetInstance(context.Background(), instance.ID)
 		if err != nil {
 			_ = linodeClient.DeleteInstance(context.Background(), instance.ID)
 			return err
 		}
-		PrintInstances(*instance)
+		PrintInstances([]linodego.Instance{*checkInstance}, GetIPAddresses(), nil)
 	}
 
 	return nil
