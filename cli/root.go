@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -27,8 +28,8 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	log.SetOutput(os.Stderr)
 	cobra.OnInitialize(initConfig)
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.linode.yaml)")
 }
 
@@ -58,7 +59,7 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Println("Using config file:", viper.ConfigFileUsed())
 	}
 }
 
@@ -85,7 +86,7 @@ func run(cmd *cobra.Command, args []string) error {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

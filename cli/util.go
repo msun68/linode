@@ -150,11 +150,13 @@ func printInstancesAnsible(instances []linodego.Instance, ips map[int][]linodego
 			fmt.Println(address)
 			fmt.Println()
 
-			groups[invalidGroupChars.ReplaceAllString(instance.Region, "_")] = append(groups[instance.Region], label)
+			name := invalidGroupChars.ReplaceAllString(instance.Region, "_")
+			groups[name] = append(groups[name], label)
 
 			for _, tag := range instance.Tags {
 				if tag != "ansible" {
-					groups[invalidGroupChars.ReplaceAllString(tag, "_")] = append(groups[tag], label)
+					name := invalidGroupChars.ReplaceAllString(tag, "_")
+					groups[name] = append(groups[name], label)
 				}
 			}
 		}
