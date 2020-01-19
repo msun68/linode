@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"text/template"
 
@@ -114,6 +115,8 @@ func printInstancesAnsible(instances []linodego.Instance, ips map[int][]linodego
 		useIPv6 = true
 	}
 
+	invalidGroupChars := regexp.MustCompile(`[^\w]`)
+
 	groups := make(map[string][]string)
 
 	for _, instance := range instances {
@@ -140,15 +143,18 @@ func printInstancesAnsible(instances []linodego.Instance, ips map[int][]linodego
 					}
 				}
 			}
-			fmt.Println("[" + instance.Label + "]")
+
+			label := invalidGroupChars.ReplaceAllString(instance.Label, "_")
+
+			fmt.Println("[" + label + "]")
 			fmt.Println(address)
 			fmt.Println()
 
-			groups[instance.Region] = append(groups[instance.Region], instance.Label)
+			groups[invalidGroupChars.ReplaceAllString(instance.Region, "_")] = append(groups[instance.Region], label)
 
 			for _, tag := range instance.Tags {
 				if tag != "ansible" {
-					groups[tag] = append(groups[tag], instance.Label)
+					groups[invalidGroupChars.ReplaceAllString(tag, "_")] = append(groups[tag], label)
 				}
 			}
 		}
@@ -163,7 +169,7 @@ func printInstancesAnsible(instances []linodego.Instance, ips map[int][]linodego
 	sort.Strings(names)
 
 	for _, name := range names {
-		fmt.Println("[" + name + "]")
+		fmt.Println("[" + name + ":children]")
 		for _, label := range groups[name] {
 			fmt.Println(label)
 		}

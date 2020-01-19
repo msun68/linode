@@ -53,7 +53,7 @@ func list(cmd *cobra.Command, args []string) error {
 
 	var printOptions *PrintInstancesOptions
 
-	fields := strings.Split(regexp.MustCompile(`\s+`).ReplaceAllString(listFormat, ""), ":")
+	fields := strings.Split(regexp.MustCompile(`\s`).ReplaceAllString(listFormat, ""), ":")
 
 	if fields[0] == "ansible" {
 		printOptions = &PrintInstancesOptions{
